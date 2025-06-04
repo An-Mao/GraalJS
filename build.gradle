@@ -1,0 +1,131 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.0.170'
+}
+
+tasks.named('wrapper', Wrapper).configure {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+jarJar.enable()
+version = mod_version
+group = mod_group_id
+
+repositories {
+    mavenLocal()
+}
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+configurations {
+    libraries
+    implementation.extendsFrom libraries
+}
+runs {
+    configureEach {
+        dependencies {
+            runtime project.configurations.libraries
+        }
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    server {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+    gameTestServer {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    data {
+        arguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+}
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+    libraries ("org.graalvm.polyglot:polyglot:24.2.1")
+    libraries ("org.graalvm.polyglot:js:24.2.1")
+    /*
+    jarJar(group: 'org.graalvm.sdk', name: 'collections', version: '24.2.1')
+    jarJar(group: 'org.graalvm.sdk', name: 'word', version: '[24.2.1,)')
+    jarJar(group: 'org.graalvm.sdk', name: 'nativeimage', version: '[24.2.1,)')
+    jarJar(group: 'org.graalvm.polyglot', name: 'polyglot', version: '[24.2.1,)')
+    jarJar(group: 'org.graalvm.polyglot', name: 'js', version: '[24.2.1,)')
+
+     */
+}
+
+tasks{
+    shadowJar {
+        archiveBaseName.set(mod_name)
+        archiveClassifier.set("all")
+        manifest {
+            attributes("Main-Class" : "dev.anye.mc.graaljs.GraalJS")
+        }
+        mergeServiceFiles()
+        configurations = [project.configurations.libraries]
+    }
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
