@@ -38,8 +38,6 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 configurations {
     libraries
     implementation.extendsFrom libraries
-    lite
-
 }
 runs { 
     configureEach {
@@ -73,23 +71,10 @@ configurations {
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
-    //libraries ("org.graalvm.polyglot:polyglot:${graaljs_version}")
-    //libraries ("org.graalvm.polyglot:js-community:${graaljs_version}")
 
-
-    libraries "org.graalvm.polyglot:polyglot:${graaljs_version}"
-    libraries "org.graalvm.js:js-language:${graaljs_version}"
-    libraries "org.graalvm.truffle:truffle-runtime:${graaljs_version}"
-
-    /*
-    lite fileTree("libs"){
-        exclude("collections-${graaljs_version}.jar")
-        exclude("word-${graaljs_version}.jar")
-        exclude("nativeimage-${graaljs_version}.jar")
-        exclude("truffle-compiler-${graaljs_version}.jar")
-    }
-
-     */
+    implementation(libraries("org.graalvm.polyglot:polyglot:${graaljs_version}"))
+    implementation(libraries("org.graalvm.js:js-language:${graaljs_version}"))
+    implementation(libraries("org.graalvm.truffle:truffle-runtime:${graaljs_version}"))
 }
 tasks.withType(ProcessResources).configureEach {
     var replaceProperties = [
@@ -111,20 +96,35 @@ tasks.withType(ProcessResources).configureEach {
 
 publishing {
     publications {
-        register('mavenJava', MavenPublication) {
+        mavenJava(MavenPublication) {
             artifactId = mod_id
             from components.java
         }
     }
     repositories {
+        mavenLocal()
         maven {
-            url "file://${project.projectDir}/repo"
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/An-Mao/JavaRepo")
+            credentials {
+                username = "An-Mao"
+                password = "ghp_" + System.getenv("GTT")
+            }
+        }
+        maven {
+            name = "LocalRepo"
+            allowInsecureProtocol = true
+            url = uri(System.getenv("LOCAL_MAVEN") + "/repository/maven-releases")
+            credentials {
+                username = "am"
+                password = System.getenv("N_P")
+            }
         }
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.encoding = 'UTF-8'
 }
 
 idea {
