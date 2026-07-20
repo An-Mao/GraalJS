@@ -155,3 +155,23 @@ tasks.named("build") {
     dependsOn shadowJar
     dependsOn shadowJarLite
 }
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = mod_id
+            from components.java
+        }
+    }
+    repositories {
+        mavenLocal()
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/An-Mao/JavaRepo")
+            credentials {
+                username = "An-Mao"
+                password = "ghp_" + System.getenv("GTT")
+            }
+        }
+    }
+}
